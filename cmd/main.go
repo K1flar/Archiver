@@ -2,6 +2,7 @@ package main
 
 import (
 	"archiver/internal/args"
+	"archiver/pkg/archiver"
 	"fmt"
 	"io"
 	"os"
@@ -27,8 +28,12 @@ func main() {
 			outputFileName = DefaultOutputArchiveName
 		}
 
-		// archive()
-		fmt.Println(dirName, outputFileName)
+		a := archiver.New()
+		err := a.Archvie(dirName, outputFileName)
+		if err != nil {
+			io.WriteString(os.Stderr, err.Error())
+			return
+		}
 	case "unarchive":
 		if len(os.Args) == 2 {
 			io.WriteString(os.Stderr, "no archvie\n")
