@@ -3,13 +3,17 @@ package main
 import (
 	"archiver/internal/args"
 	"archiver/pkg/archiver"
+	"archiver/pkg/unarchiver"
 	"fmt"
 	"io"
 	"os"
 	"path"
 )
 
-const DefaultOutputArchiveName = "archive.txt"
+const (
+	DefaultOutputArchiveName = "archive.txt"
+	DefaultOutputDirName     = "."
+)
 
 func main() {
 	if len(os.Args) == 1 {
@@ -54,11 +58,31 @@ func main() {
 			return
 		}
 
+		wd, err := os.Getwd()
+		if err != nil {
+			io.WriteString(os.Stderr, fmt.Sprintf("%s\n", err.Error()))
+			return
+		}
+
 		archiveName := os.Args[2]
+		if archiveName[0] != '/' {
+			archiveName = path.Join(wd, archiveName)
+		}
 
-		// unarchive()
-		fmt.Println(archiveName)
+		outputDirName, exists := args.FindFlag(os.Args, "o")
+		if !exists {
+			outputDirName = DefaultOutputDirName
+		}
+		if outputDirName[0] != '/' {
+			outputDirName = path.Join(wd, outputDirName)
+		}
 
+		ua := unarchiver.New()
+		err = ua.Unarchive(archiveName, outputDirName)
+		if err != nil {
+			io.WriteString(os.Stderr, fmt.Sprintf("%s\n", err.Error()))
+			return
+		}
 	default:
 		io.WriteString(os.Stderr, "unknown command\n")
 	}

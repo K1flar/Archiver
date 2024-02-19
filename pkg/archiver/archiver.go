@@ -42,7 +42,7 @@ func (a *Archvier) Archvie(inputDirName, outputFileName string) error {
 	}()
 
 	var headers strings.Builder
-	err = a.archvieRecursive(dir, temp, &headers)
+	err = a.archvieRecursive(dir, temp, &headers, path.Base(inputDirName))
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func (a *Archvier) Archvie(inputDirName, outputFileName string) error {
 			if err == io.EOF {
 				break
 			}
-			return fmt.Errorf("test%w", err)
+			return fmt.Errorf("%w", err)
 		}
 		_, err = out.Write(buf[:n])
 		if err != nil {
@@ -71,18 +71,22 @@ func (a *Archvier) Archvie(inputDirName, outputFileName string) error {
 	return nil
 }
 
-func (a *Archvier) archvieRecursive(dir, out *os.File, headers *strings.Builder) error {
+func (a *Archvier) archvieRecursive(dir, out *os.File, headers *strings.Builder, curDir string) error {
 	files, err := dir.ReadDir(0)
 	if err != nil {
 		return err
+	}
+
+	if len(files) == 0 {
+		headers.WriteString(fmt.Sprintf("%s/,%d;", curDir, 0))
 	}
 
 	for _, file := range files {
 		if file.Name() == out.Name() {
 			continue
 		}
-
 		filePath := path.Join(dir.Name(), file.Name())
+		fileName := path.Base(filePath)
 		f, err := os.Open(filePath)
 		if err != nil {
 			return err
@@ -90,7 +94,7 @@ func (a *Archvier) archvieRecursive(dir, out *os.File, headers *strings.Builder)
 		defer f.Close()
 
 		if file.IsDir() {
-			err = a.archvieRecursive(f, out, headers)
+			err = a.archvieRecursive(f, out, headers, path.Join(curDir, fileName))
 			if err != nil {
 				return err
 			}
@@ -99,7 +103,7 @@ func (a *Archvier) archvieRecursive(dir, out *os.File, headers *strings.Builder)
 			if err != nil {
 				return err
 			}
-			headers.WriteString(fmt.Sprintf("%s,%d;", filePath, len(data)))
+			headers.WriteString(fmt.Sprintf("%s,%d;", path.Join(curDir, fileName), len(data)))
 			_, err = out.Write(data)
 			if err != nil {
 				return err
