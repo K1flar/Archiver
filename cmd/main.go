@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 )
 
 const DefaultOutputArchiveName = "archive.txt"
@@ -15,6 +16,7 @@ func main() {
 		io.WriteString(os.Stderr, "no command line arguments\n")
 		return
 	}
+
 	switch os.Args[1] {
 	case "archive":
 		if len(os.Args) == 2 {
@@ -22,16 +24,28 @@ func main() {
 			return
 		}
 
+		wd, err := os.Getwd()
+		if err != nil {
+			io.WriteString(os.Stderr, fmt.Sprintf("%s\n", err.Error()))
+			return
+		}
+
 		dirName := os.Args[2]
+		if dirName[0] != '/' {
+			dirName = path.Join(wd, dirName)
+		}
 		outputFileName, exists := args.FindFlag(os.Args, "o")
 		if !exists {
 			outputFileName = DefaultOutputArchiveName
 		}
+		if outputFileName[0] != '/' {
+			outputFileName = path.Join(wd, outputFileName)
+		}
 
 		a := archiver.New()
-		err := a.Archvie(dirName, outputFileName)
+		err = a.Archvie(dirName, outputFileName)
 		if err != nil {
-			io.WriteString(os.Stderr, err.Error())
+			io.WriteString(os.Stderr, fmt.Sprintf("%s\n", err.Error()))
 			return
 		}
 	case "unarchive":
