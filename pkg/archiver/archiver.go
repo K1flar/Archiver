@@ -26,12 +26,6 @@ func (a *Archvier) Archvie(inputDirName, outputFileName string) error {
 	}
 	defer dir.Close()
 
-	out, err := os.OpenFile(outputFileName, os.O_WRONLY|os.O_CREATE, 0622)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
 	temp, err := os.OpenFile(TempFile, os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
 		return err
@@ -46,6 +40,12 @@ func (a *Archvier) Archvie(inputDirName, outputFileName string) error {
 	if err != nil {
 		return err
 	}
+
+	out, err := os.OpenFile(outputFileName, os.O_WRONLY|os.O_CREATE, 0622)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
 
 	_, err = out.WriteString(headers.String() + "\n")
 	if err != nil {
@@ -82,6 +82,7 @@ func (a *Archvier) archvieRecursive(dir, out *os.File, headers *strings.Builder,
 	}
 
 	for _, file := range files {
+		fmt.Println(file.Name(), out.Name())
 		if file.Name() == out.Name() {
 			continue
 		}
