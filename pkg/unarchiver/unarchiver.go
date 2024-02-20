@@ -40,7 +40,7 @@ func (ua *Unarchiver) Unarchive(archiveName, outputDirName string) error {
 		absoluteFilePath := path.Join(outputDirName, filePath)
 
 		var isDir bool
-		if len(strings.Split(filePath, ".")) == 1 {
+		if len(strings.Split(filePath, ".")) == 1 && fileSize == 0 {
 			isDir = true
 			err = os.MkdirAll(absoluteFilePath, 0777)
 			if err != nil {
@@ -61,7 +61,7 @@ func (ua *Unarchiver) Unarchive(archiveName, outputDirName string) error {
 		}
 
 		if !isDir {
-			err = os.WriteFile(absoluteFilePath, fileData, 0666)
+			err = os.WriteFile(absoluteFilePath, fileData, 0777)
 			if err != nil {
 				return err
 			}
