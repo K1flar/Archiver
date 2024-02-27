@@ -3,7 +3,6 @@ package main
 import (
 	"archiver/internal/args"
 	"archiver/pkg/archiver"
-	"archiver/pkg/unarchiver"
 	"fmt"
 	"io"
 	"os"
@@ -20,6 +19,8 @@ func main() {
 		io.WriteString(os.Stderr, "no command line arguments\n")
 		return
 	}
+
+	arc := archiver.New()
 
 	switch os.Args[1] {
 	case "archive":
@@ -46,8 +47,7 @@ func main() {
 			outputFileName = path.Join(wd, outputFileName)
 		}
 
-		a := archiver.New()
-		err = a.Archvie(dirName, outputFileName)
+		err = arc.Archvie(dirName, outputFileName)
 		if err != nil {
 			io.WriteString(os.Stderr, fmt.Sprintf("%s\n", err.Error()))
 			return
@@ -77,8 +77,7 @@ func main() {
 			outputDirName = path.Join(wd, outputDirName)
 		}
 
-		ua := unarchiver.New()
-		err = ua.Unarchive(archiveName, outputDirName)
+		err = arc.Unarchive(archiveName, outputDirName)
 		if err != nil {
 			io.WriteString(os.Stderr, fmt.Sprintf("%s\n", err.Error()))
 			return
