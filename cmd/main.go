@@ -2,20 +2,43 @@ package main
 
 import (
 	"archiver/internal/args"
+	"archiver/internal/compressors/huffman"
+	"archiver/internal/transformers/bwt"
+	"archiver/internal/transformers/mtf"
 	"archiver/pkg/archiver"
-	"archiver/pkg/unarchiver"
 	"fmt"
 	"io"
 	"os"
 	"path"
+	"time"
 )
 
 const (
-	DefaultOutputArchiveName = "archive.txt"
+	DefaultOutputArchiveName = "archive.arc"
 	DefaultOutputDirName     = "."
 )
 
+type Transformer interface {
+	Transform() error
+	Retransform() error
+}
+
+type Compressor interface {
+	Compress() error
+	Decompress() error
+}
+
+var Transformers = map[string]func(string) Transformer{
+	"bwt": func(s string) Transformer { return bwt.New(s) },
+	"mtf": func(s string) Transformer { return mtf.New(s) },
+}
+
+var Compressors = map[string]func(string) Compressor{
+	"huff": func(s string) Compressor { return huffman.New(s) },
+}
+
 func main() {
+	s := time.Now()
 	if len(os.Args) == 1 {
 		io.WriteString(os.Stderr, "no command line arguments\n")
 		return
@@ -46,15 +69,34 @@ func main() {
 			outputFileName = path.Join(wd, outputFileName)
 		}
 
-		a := archiver.New()
-		err = a.Archvie(dirName, outputFileName)
+		arc := archiver.New(outputFileName)
+		err = arc.Archive(dirName)
 		if err != nil {
 			io.WriteString(os.Stderr, fmt.Sprintf("%s\n", err.Error()))
 			return
 		}
+		for _, arg := range os.Args {
+			if arg[0] != '-' {
+				continue
+			}
+			flag := arg[1:]
+			if _, ok := Transformers[flag]; ok {
+				err = arc.Transform(Transformers[flag](outputFileName))
+				if err != nil {
+					io.WriteString(os.Stderr, fmt.Sprintf("%s\n", err.Error()))
+					return
+				}
+			}
+			if _, ok := Compressors[flag]; ok {
+				arc.Compress(Compressors[flag](outputFileName))
+			}
+		}
+		e := time.Now()
+		fmt.Printf("Done: %.2f sec", e.Sub(s).Seconds())
+
 	case "unarchive":
 		if len(os.Args) == 2 {
-			io.WriteString(os.Stderr, "no archvie\n")
+			io.WriteString(os.Stderr, "no archive\n")
 			return
 		}
 
@@ -77,12 +119,30 @@ func main() {
 			outputDirName = path.Join(wd, outputDirName)
 		}
 
-		ua := unarchiver.New()
-		err = ua.Unarchive(archiveName, outputDirName)
+		arc := archiver.New(archiveName)
+		for _, arg := range os.Args {
+			if arg[0] != '-' {
+				continue
+			}
+			flag := arg[1:]
+			if _, ok := Transformers[flag]; ok {
+				err = arc.Retransform(Transformers[flag](archiveName))
+				if err != nil {
+					io.WriteString(os.Stderr, fmt.Sprintf("%s\n", err.Error()))
+					return
+				}
+			}
+			if _, ok := Compressors[flag]; ok {
+				arc.Decompress(Compressors[flag](archiveName))
+			}
+		}
+		err = arc.Unarchive(outputDirName)
 		if err != nil {
 			io.WriteString(os.Stderr, fmt.Sprintf("%s\n", err.Error()))
 			return
 		}
+		e := time.Now()
+		fmt.Printf("Done: %.2f sec", e.Sub(s).Seconds())
 	default:
 		io.WriteString(os.Stderr, "unknown command\n")
 	}
