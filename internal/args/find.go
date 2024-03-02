@@ -9,3 +9,13 @@ func FindFlag(args []string, name string) (string, bool) {
 
 	return "", false
 }
+
+func FlagExist(args []string, name string) bool {
+	for _, arg := range args {
+		if arg == "-"+name {
+			return true
+		}
+	}
+
+	return false
+}
