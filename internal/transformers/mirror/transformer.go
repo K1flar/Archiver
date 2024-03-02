@@ -1,30 +1,27 @@
-package bwt
+package mirror
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
-	"strconv"
-	"strings"
 )
 
 const (
 	TempFile = "temp.txt"
-	BufSize  = 1024
+	BufSize  = 4096
 )
 
-type BWTTransformer struct {
+type MirrorTransformer struct {
 	archive string
 }
 
-func New(archiveName string) *BWTTransformer {
-	return &BWTTransformer{
+func New(archiveName string) *MirrorTransformer {
+	return &MirrorTransformer{
 		archive: archiveName,
 	}
 }
 
-func (t *BWTTransformer) Transform() error {
+func (t *MirrorTransformer) Transform() error {
 	f, err := os.Open(t.archive)
 	if err != nil {
 		return err
@@ -39,9 +36,7 @@ func (t *BWTTransformer) Transform() error {
 		os.Remove(TempFile)
 	}()
 
-	var header strings.Builder
 	buf := make([]byte, BufSize)
-	f.Seek(0, 0)
 	for {
 		n, err := f.Read(buf)
 		if err != nil {
@@ -50,9 +45,8 @@ func (t *BWTTransformer) Transform() error {
 			}
 			return fmt.Errorf("%w", err)
 		}
-		transformAlg := NewBWTAlgorithm(0)
+		transformAlg := NewMirrorAlgorithm()
 		temp.Write(transformAlg.Transform(buf[:n]))
-		header.WriteString(fmt.Sprintf("%d;", transformAlg.GetCode()))
 	}
 
 	f.Close()
@@ -61,11 +55,6 @@ func (t *BWTTransformer) Transform() error {
 		return err
 	}
 	defer f.Close()
-
-	_, err = f.WriteString(header.String() + "\n")
-	if err != nil {
-		return err
-	}
 
 	temp.Seek(0, 0)
 	for {
@@ -85,7 +74,7 @@ func (t *BWTTransformer) Transform() error {
 	return nil
 }
 
-func (t *BWTTransformer) Retransform() error {
+func (t *MirrorTransformer) Retransform() error {
 	f, err := os.Open(t.archive)
 	if err != nil {
 		return err
@@ -100,15 +89,7 @@ func (t *BWTTransformer) Retransform() error {
 		os.Remove(TempFile)
 	}()
 
-	scanner := bufio.NewScanner(f)
-	scanner.Scan()
-	header := scanner.Text()
-
-	codes := strings.Split(header[:len(header)-1], ";")
-
-	i := 0
 	buf := make([]byte, BufSize)
-	f.Seek(int64(len(header)+1), 0)
 	for {
 		n, err := f.Read(buf)
 		if err != nil {
@@ -117,16 +98,8 @@ func (t *BWTTransformer) Retransform() error {
 			}
 			return fmt.Errorf("%w", err)
 		}
-		if i >= len(codes) {
-			return fmt.Errorf("bwt retransform: bad header")
-		}
-		code, err := strconv.Atoi(codes[i])
-		if err != nil {
-			return err
-		}
-		transformAlg := NewBWTAlgorithm(code)
+		transformAlg := NewMirrorAlgorithm()
 		temp.Write(transformAlg.Retransform(buf[:n]))
-		i++
 	}
 
 	f.Close()

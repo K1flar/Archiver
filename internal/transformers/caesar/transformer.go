@@ -1,4 +1,4 @@
-package bwt
+package caesar
 
 import (
 	"bufio"
@@ -11,20 +11,22 @@ import (
 
 const (
 	TempFile = "temp.txt"
-	BufSize  = 1024
+	BufSize  = 4096
 )
 
-type BWTTransformer struct {
+type CaesarTransformer struct {
 	archive string
+	shift   int
 }
 
-func New(archiveName string) *BWTTransformer {
-	return &BWTTransformer{
+func New(archiveName string, shift int) *CaesarTransformer {
+	return &CaesarTransformer{
 		archive: archiveName,
+		shift:   shift,
 	}
 }
 
-func (t *BWTTransformer) Transform() error {
+func (t *CaesarTransformer) Transform() error {
 	f, err := os.Open(t.archive)
 	if err != nil {
 		return err
@@ -40,6 +42,8 @@ func (t *BWTTransformer) Transform() error {
 	}()
 
 	var header strings.Builder
+	header.WriteString(fmt.Sprintf("%d;\n", t.shift))
+	temp.WriteString(header.String())
 	buf := make([]byte, BufSize)
 	f.Seek(0, 0)
 	for {
@@ -50,9 +54,8 @@ func (t *BWTTransformer) Transform() error {
 			}
 			return fmt.Errorf("%w", err)
 		}
-		transformAlg := NewBWTAlgorithm(0)
+		transformAlg := NewCaesarAlgorithm(t.shift)
 		temp.Write(transformAlg.Transform(buf[:n]))
-		header.WriteString(fmt.Sprintf("%d;", transformAlg.GetCode()))
 	}
 
 	f.Close()
@@ -61,11 +64,6 @@ func (t *BWTTransformer) Transform() error {
 		return err
 	}
 	defer f.Close()
-
-	_, err = f.WriteString(header.String() + "\n")
-	if err != nil {
-		return err
-	}
 
 	temp.Seek(0, 0)
 	for {
@@ -85,7 +83,7 @@ func (t *BWTTransformer) Transform() error {
 	return nil
 }
 
-func (t *BWTTransformer) Retransform() error {
+func (t *CaesarTransformer) Retransform() error {
 	f, err := os.Open(t.archive)
 	if err != nil {
 		return err
@@ -104,9 +102,11 @@ func (t *BWTTransformer) Retransform() error {
 	scanner.Scan()
 	header := scanner.Text()
 
-	codes := strings.Split(header[:len(header)-1], ";")
+	shift, err := strconv.Atoi(strings.Split(header[:len(header)-1], ";")[0])
+	if err != nil {
+		return err
+	}
 
-	i := 0
 	buf := make([]byte, BufSize)
 	f.Seek(int64(len(header)+1), 0)
 	for {
@@ -117,16 +117,8 @@ func (t *BWTTransformer) Retransform() error {
 			}
 			return fmt.Errorf("%w", err)
 		}
-		if i >= len(codes) {
-			return fmt.Errorf("bwt retransform: bad header")
-		}
-		code, err := strconv.Atoi(codes[i])
-		if err != nil {
-			return err
-		}
-		transformAlg := NewBWTAlgorithm(code)
+		transformAlg := NewCaesarAlgorithm(shift)
 		temp.Write(transformAlg.Retransform(buf[:n]))
-		i++
 	}
 
 	f.Close()
