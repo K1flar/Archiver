@@ -4,12 +4,15 @@ import (
 	"archiver/internal/args"
 	"archiver/internal/compressors/huffman"
 	"archiver/internal/transformers/bwt"
+	"archiver/internal/transformers/caesar"
+	"archiver/internal/transformers/mirror"
 	"archiver/internal/transformers/mtf"
 	"archiver/pkg/archiver"
 	"fmt"
 	"io"
 	"os"
 	"path"
+	"strconv"
 	"time"
 )
 
@@ -28,9 +31,14 @@ type Compressor interface {
 	Decompress() error
 }
 
-var Transformers = map[string]func(string) Transformer{
-	"bwt": func(s string) Transformer { return bwt.New(s) },
-	"mtf": func(s string) Transformer { return mtf.New(s) },
+var Transformers = map[string]func(string, ...string) Transformer{
+	"bwt":    func(s1 string, s2 ...string) Transformer { return bwt.New(s1) },
+	"mtf":    func(s1 string, s2 ...string) Transformer { return mtf.New(s1) },
+	"mirror": func(s1 string, s2 ...string) Transformer { return mirror.New(s1) },
+	"caesar": func(s1 string, s2 ...string) Transformer {
+		shift, _ := strconv.Atoi(s2[0])
+		return caesar.New(s1, shift)
+	},
 }
 
 var Compressors = map[string]func(string) Compressor{
@@ -81,7 +89,8 @@ func main() {
 			}
 			flag := arg[1:]
 			if _, ok := Transformers[flag]; ok {
-				err = arc.Transform(Transformers[flag](outputFileName))
+				arg, _ := args.FindFlag(os.Args, flag)
+				err = arc.Transform(Transformers[flag](outputFileName, arg))
 				if err != nil {
 					io.WriteString(os.Stderr, fmt.Sprintf("%s\n", err.Error()))
 					return
@@ -126,7 +135,8 @@ func main() {
 			}
 			flag := arg[1:]
 			if _, ok := Transformers[flag]; ok {
-				err = arc.Retransform(Transformers[flag](archiveName))
+				arg, _ := args.FindFlag(os.Args, flag)
+				err = arc.Retransform(Transformers[flag](archiveName, arg))
 				if err != nil {
 					io.WriteString(os.Stderr, fmt.Sprintf("%s\n", err.Error()))
 					return
