@@ -1,4 +1,4 @@
-package args
+package flags
 
 func FindFlag(args []string, name string) (string, bool) {
 	for i := 0; i < len(args)-1; i++ {
