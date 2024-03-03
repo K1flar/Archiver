@@ -7,6 +7,13 @@ import (
 	"path"
 )
 
+const (
+	_  = iota
+	KB = 1 << (10 * iota)
+	MB
+	GB
+)
+
 func checkIO(processName string, args []string) (string, string, error) {
 	if len(args) == 0 {
 		return "", "", fmt.Errorf("%s: no input file", processName)
@@ -29,4 +36,23 @@ func checkIO(processName string, args []string) (string, string, error) {
 	}
 
 	return input, output, nil
+}
+
+func getSize(count int64) string {
+	switch {
+	case count >= GB:
+		return fmt.Sprintf("%.2fGb", float64(count)/GB)
+	case count >= MB:
+		return fmt.Sprintf("%.2fMb", float64(count)/MB)
+	case count >= KB:
+		return fmt.Sprintf("%.2fKb", float64(count)/KB)
+	}
+	return fmt.Sprintf("%db", count)
+}
+
+func pow(n int, p uint) int {
+	if p == 0 {
+		return 1
+	}
+	return n * pow(n, p-1)
 }

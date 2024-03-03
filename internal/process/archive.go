@@ -9,6 +9,7 @@ import (
 	"archiver/internal/transformers/mtf"
 	"archiver/pkg/archiver"
 	"fmt"
+	"os"
 	"strconv"
 	"time"
 )
@@ -71,7 +72,11 @@ func Archive(args []string) error {
 			}
 		}
 	}
-	fmt.Printf("Archive done: %.2f sec\n", time.Since(s).Seconds())
+	fileInfo, err := os.Stat(outputArchive)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Archive done: %.2f sec \tSize: %s\n", time.Since(s).Seconds(), getSize(fileInfo.Size()))
 
 	return nil
 }
