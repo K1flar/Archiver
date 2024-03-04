@@ -84,7 +84,6 @@ func (a *Archvier) archvieRecursive(dir, out *os.File, headers *strings.Builder,
 	}
 
 	for _, file := range files {
-		fmt.Println(file.Name(), out.Name())
 		if file.Name() == out.Name() {
 			continue
 		}
