@@ -15,13 +15,17 @@ const (
 	BufSize  = 4096
 )
 
-type Archvier struct{}
-
-func New() *Archvier {
-	return &Archvier{}
+type Archiver struct {
+	archive string
 }
 
-func (a *Archvier) Archvie(inputDirName, outputFileName string) error {
+func New(archive string) *Archiver {
+	return &Archiver{
+		archive: archive,
+	}
+}
+
+func (a *Archiver) Archive(inputDirName string) error {
 	dir, err := os.OpenFile(inputDirName, os.O_RDONLY, 0777)
 	if err != nil {
 		return err
@@ -38,12 +42,12 @@ func (a *Archvier) Archvie(inputDirName, outputFileName string) error {
 	}()
 
 	var headers strings.Builder
-	err = a.archvieRecursive(dir, temp, &headers, path.Base(inputDirName))
+	err = a.archiveRecursive(dir, temp, &headers, path.Base(inputDirName))
 	if err != nil {
 		return err
 	}
 
-	out, err := os.OpenFile(outputFileName, os.O_WRONLY|os.O_CREATE, 0622)
+	out, err := os.OpenFile(a.archive, os.O_WRONLY|os.O_CREATE, 0622)
 	if err != nil {
 		return err
 	}
@@ -73,7 +77,7 @@ func (a *Archvier) Archvie(inputDirName, outputFileName string) error {
 	return nil
 }
 
-func (a *Archvier) archvieRecursive(dir, out *os.File, headers *strings.Builder, curDir string) error {
+func (a *Archiver) archiveRecursive(dir, out *os.File, headers *strings.Builder, curDir string) error {
 	files, err := dir.ReadDir(0)
 	if err != nil {
 		return err
@@ -96,7 +100,7 @@ func (a *Archvier) archvieRecursive(dir, out *os.File, headers *strings.Builder,
 		defer f.Close()
 
 		if file.IsDir() {
-			err = a.archvieRecursive(f, out, headers, path.Join(curDir, fileName))
+			err = a.archiveRecursive(f, out, headers, path.Join(curDir, fileName))
 			if err != nil {
 				return err
 			}
@@ -116,8 +120,8 @@ func (a *Archvier) archvieRecursive(dir, out *os.File, headers *strings.Builder,
 	return nil
 }
 
-func (a *Archvier) Unarchive(archiveName, outputDirName string) error {
-	arch, err := os.OpenFile(archiveName, os.O_RDONLY, 0777)
+func (a *Archiver) Unarchive(outputDirName string) error {
+	arch, err := os.OpenFile(a.archive, os.O_RDONLY, 0777)
 	if err != nil {
 		return err
 	}
